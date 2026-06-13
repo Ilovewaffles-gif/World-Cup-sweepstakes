@@ -1,390 +1,461 @@
-import { useState, useEffect, useCallback } from "react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Cup 2026 - Family Sweepstakes</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #0a0a1a 0%, #0d1b2a 50%, #0a1628 100%);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #fff;
+      padding: 24px 16px 40px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header .ball { font-size: 2.5rem; margin-bottom: 4px; }
+
+    header h1 {
+      font-size: clamp(1.5rem, 5vw, 2.2rem);
+      font-weight: 800;
+      background: linear-gradient(90deg, #f59e0b, #fcd34d, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+
+    header .subtitle {
+      color: rgba(255,255,255,0.4);
+      font-size: 0.85rem;
+      margin-top: 4px;
+      letter-spacing: 0.15em;
+    }
+
+    #refresh-btn {
+      margin-top: 14px;
+      background: rgba(245,158,11,0.15);
+      border: 1px solid rgba(245,158,11,0.4);
+      color: #f59e0b;
+      border-radius: 20px;
+      padding: 8px 20px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+    #refresh-btn:hover { background: rgba(245,158,11,0.25); }
+    #refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #last-updated {
+      color: rgba(255,255,255,0.25);
+      font-size: 0.68rem;
+      margin-top: 8px;
+      min-height: 1em;
+    }
+
+    #error-msg {
+      display: none;
+      margin-top: 10px;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.75rem;
+      color: #fca5a5;
+      display: inline-block;
+    }
+
+    #leaderboard {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin-bottom: 28px;
+      padding-bottom: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .lb-pill {
+      background: rgba(255,255,255,0.05);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .lb-pill .lb-pts { color: #f59e0b; font-weight: 700; }
+    .lb-pill .lb-rank { opacity: 0.7; }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .card {
+      border-radius: 16px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .card:hover { transform: translateY(-3px); }
+    .card.eliminated { opacity: 0.6; }
+
+    .card-rank {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-size: 1.3rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .card-flag { font-size: 2.4rem; line-height: 1; }
+    .card-owner {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .card-team {
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .card-group {
+      color: rgba(255,255,255,0.45);
+      font-size: 0.68rem;
+      margin-top: 2px;
+    }
+
+    .stage-pill {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .stage-pill.champion { background: #f59e0b; color: #000; }
+    .stage-pill.eliminated-pill { background: #374151; }
+
+    .stats-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      text-align: center;
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      min-width: 38px;
+    }
+    .stat-box.highlight { background: rgba(255,255,255,0.12); }
+    .stat-val {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .stat-lbl {
+      font-size: 0.62rem;
+      color: rgba(255,255,255,0.55);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .last-result {
+      margin-bottom: 10px;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+    }
+
+    .result-badge {
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-right: 6px;
+      color: #fff;
+    }
+    .result-badge.W { background: #22c55e; }
+    .result-badge.D { background: #f59e0b; }
+    .result-badge.L { background: #ef4444; }
+
+    .next-match {
+      background: rgba(0,0,0,0.25);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.7);
+    }
+    .next-label {
+      color: rgba(255,255,255,0.4);
+      margin-right: 6px;
+    }
+
+    .schedule-item {
+      font-size: 0.68rem;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 3px;
+    }
+
+    .elim-label {
+      position: absolute;
+      bottom: 10px;
+      right: 12px;
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.3);
+      font-weight: 600;
+      letter-spacing: 0.1em;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 32px;
+      color: rgba(255,255,255,0.2);
+      font-size: 0.68rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="ball">&#x26BD;</div>
+  <h1>World Cup 2026</h1>
+  <div class="subtitle">FAMILY SWEEPSTAKES</div>
+  <br>
+  <button id="refresh-btn" onclick="loadData()">&#x21BB; Refresh Live Data</button>
+  <div id="last-updated"></div>
+  <div id="error-msg"></div>
+</header>
+
+<div id="leaderboard"></div>
+<div id="grid"></div>
+
+<footer>&#x1F3C6; World Cup 2026 &middot; USA, Canada &amp; Mexico &middot; Jun 11 &ndash; Jul 19</footer>
+
+<script>
 const SWEEPSTAKE = [
-  { name: "Jacky", team: "Portugal", flag: "🇵🇹", group: "K", color: "#006B3F" },
-  { name: "Yasmin", team: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", group: "L", color: "#CF091B" },
-  { name: "Trevor", team: "Brazil", flag: "🇧🇷", group: "C", color: "#009C3B" },
-  { name: "Louise", team: "Spain", flag: "🇪🇸", group: "H", color: "#AA151B" },
-  { name: "Harley", team: "France", flag: "🇫🇷", group: "I", color: "#002395" },
-  { name: "Finley", team: "Netherlands", flag: "🇳🇱", group: "F", color: "#FF4F00" },
-  { name: "Leon", team: "Morocco", flag: "🇲🇦", group: "C", color: "#C1272D" },
-  { name: "Calum", team: "Argentina", flag: "🇦🇷", group: "J", color: "#74ACDF" },
+  { name: "Jacky",  team: "Portugal",    flag: "\uD83C\uDDF5\uD83C\uDDF9", group: "K", color: "#006B3F" },
+  { name: "Yasmin", team: "England",     flag: "\uD83C\uDDEC\uD83C\uDDE7", group: "L", color: "#CF091B" },
+  { name: "Trevor", team: "Brazil",      flag: "\uD83C\uDDE7\uD83C\uDDF7", group: "C", color: "#009C3B" },
+  { name: "Louise", team: "Spain",       flag: "\uD83C\uDDEA\uD83C\uDDF8", group: "H", color: "#AA151B" },
+  { name: "Harley", team: "France",      flag: "\uD83C\uDDEB\uD83C\uDDF7", group: "I", color: "#002395" },
+  { name: "Finley", team: "Netherlands", flag: "\uD83C\uDDF3\uD83C\uDDF1", group: "F", color: "#FF4F00" },
+  { name: "Leon",   team: "Morocco",     flag: "\uD83C\uDDF2\uD83C\uDDE6", group: "C", color: "#C1272D" },
+  { name: "Calum",  team: "Argentina",   flag: "\uD83C\uDDE6\uD83C\uDDF7", group: "J", color: "#74ACDF" },
 ];
 
-const TEAM_SCHEDULES = {
-  Portugal: [
-    { date: "Jun 17", opponent: "DR Congo", time: "1pm ET" },
-    { date: "Jun 23", opponent: "Uzbekistan", time: "1pm ET" },
-    { date: "Jun 28", opponent: "Colombia", time: "7:30pm ET" },
-  ],
-  England: [
-    { date: "Jun 17", opponent: "Croatia", time: "4pm ET" },
-    { date: "Jun 23", opponent: "Ghana", time: "4pm ET" },
-    { date: "Jun 28", opponent: "Panama", time: "TBD" },
-  ],
-  Brazil: [
-    { date: "Jun 13", opponent: "Morocco", time: "6pm ET" },
-    { date: "Jun 20", opponent: "Scotland", time: "TBD" },
-    { date: "Jun 24", opponent: "Haiti", time: "TBD" },
-  ],
-  Spain: [
-    { date: "Jun 15", opponent: "Cape Verde", time: "1pm ET" },
-    { date: "Jun 21", opponent: "Saudi Arabia", time: "noon ET" },
-    { date: "Jun 26", opponent: "Uruguay", time: "8pm ET" },
-  ],
-  France: [
-    { date: "Jun 16", opponent: "Senegal", time: "3pm ET" },
-    { date: "Jun 22", opponent: "Iraq", time: "5pm ET" },
-    { date: "Jun 26", opponent: "Norway", time: "3pm ET" },
-  ],
-  Netherlands: [
-    { date: "Jun 14", opponent: "Japan", time: "4pm ET" },
-    { date: "Jun 20", opponent: "Sweden", time: "1pm ET" },
-    { date: "Jun 25", opponent: "Tunisia", time: "7pm ET" },
-  ],
-  Morocco: [
-    { date: "Jun 13", opponent: "Brazil", time: "6pm ET" },
-    { date: "Jun 20", opponent: "Haiti", time: "TBD" },
-    { date: "Jun 24", opponent: "Scotland", time: "6pm ET" },
-  ],
-  Argentina: [
-    { date: "Jun 16", opponent: "Algeria", time: "9pm ET" },
-    { date: "Jun 22", opponent: "Austria", time: "1pm ET" },
-    { date: "Jun 27", opponent: "Jordan", time: "10pm ET" },
-  ],
+const SCHEDULES = {
+  Portugal:    [["Jun 17","DR Congo","1pm ET"],["Jun 23","Uzbekistan","1pm ET"],["Jun 28","Colombia","7:30pm ET"]],
+  England:     [["Jun 17","Croatia","4pm ET"],["Jun 23","Ghana","4pm ET"],["Jun 28","Panama","TBD"]],
+  Brazil:      [["Jun 13","Morocco","6pm ET"],["Jun 20","Scotland","TBD"],["Jun 24","Haiti","TBD"]],
+  Spain:       [["Jun 15","Cape Verde","1pm ET"],["Jun 21","Saudi Arabia","noon ET"],["Jun 26","Uruguay","8pm ET"]],
+  France:      [["Jun 16","Senegal","3pm ET"],["Jun 22","Iraq","5pm ET"],["Jun 26","Norway","3pm ET"]],
+  Netherlands: [["Jun 14","Japan","4pm ET"],["Jun 20","Sweden","1pm ET"],["Jun 25","Tunisia","7pm ET"]],
+  Morocco:     [["Jun 13","Brazil","6pm ET"],["Jun 20","Haiti","TBD"],["Jun 24","Scotland","6pm ET"]],
+  Argentina:   [["Jun 16","Algeria","9pm ET"],["Jun 22","Austria","1pm ET"],["Jun 27","Jordan","10pm ET"]],
 };
 
-async function fetchLiveData(teams) {
-  const teamList = teams.map(t => `${t.team} (Group ${t.group})`).join(", ");
-  const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+let liveData = null;
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      system: `You are a sports data assistant. Today is ${today}. The 2026 FIFA World Cup is currently being played in the USA, Canada and Mexico. Search for the very latest match results and standings for these specific teams in the World Cup 2026. Return ONLY a JSON object (no markdown, no backticks, no preamble) with this exact structure:
-{
-  "teams": {
-    "TeamName": {
-      "status": "Active" or "Eliminated",
-      "stage": "Group Stage" / "Round of 32" / "Quarter-Finals" / "Semi-Finals" / "Final" / "Champions" / "Eliminated",
-      "played": number,
-      "won": number,
-      "drawn": number,
-      "lost": number,
-      "gf": number,
-      "ga": number,
-      "points": number,
-      "groupPosition": number or null,
-      "lastResult": "W 3-1 vs X" or "D 1-1 vs Y" or "L 0-2 vs Z" or "No games yet",
-      "nextMatch": "vs Opponent, Date" or "Eliminated" or "TBD"
-    }
-  },
-  "lastUpdated": "time string"
-}`,
-      messages: [
-        {
-          role: "user",
-          content: `Search for the latest FIFA World Cup 2026 results and group standings for these teams: ${teamList}. Return their current stats as JSON.`
-        }
-      ]
-    })
-  });
+async function loadData() {
+  const btn = document.getElementById('refresh-btn');
+  const errEl = document.getElementById('error-msg');
+  btn.disabled = true;
+  btn.textContent = '\u27F3 Refreshing...';
+  errEl.style.display = 'none';
 
-  const data = await response.json();
-  const fullText = data.content
-    .filter(b => b.type === "text")
-    .map(b => b.text)
-    .join("");
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const teamList = SWEEPSTAKE.map(t => t.team + ' (Group ' + t.group + ')').join(', ');
 
-  // Strip any markdown code fences
-  const clean = fullText.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-  return JSON.parse(clean);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        system: `You are a sports data assistant. Today is ${today}. The 2026 FIFA World Cup is currently being played in the USA, Canada and Mexico. Search for the very latest match results and standings for these specific teams. Return ONLY a JSON object (no markdown, no backticks, no preamble) with this exact structure:
+{"teams":{"TeamName":{"status":"Active or Eliminated","stage":"Group Stage or Round of 32 or Quarter-Finals or Semi-Finals or Final or Champions or Eliminated","played":0,"won":0,"drawn":0,"lost":0,"gf":0,"ga":0,"points":0,"groupPosition":1,"lastResult":"W 3-1 vs X or D 1-1 vs Y or L 0-2 vs Z or No games yet","nextMatch":"vs Opponent, Date or Eliminated or TBD"}},"lastUpdated":"time"}`,
+        messages: [{
+          role: 'user',
+          content: 'Search for the latest FIFA World Cup 2026 results and group standings for: ' + teamList + '. Return their current stats as JSON.'
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const clean = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const parsed = JSON.parse(clean);
+    liveData = parsed.teams;
+    document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    errEl.textContent = '\u26A0 Could not fetch live data. Showing schedule info only.';
+    errEl.style.display = 'inline-block';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '\u21BB Refresh Live Data';
+  render();
 }
 
-function ScoreBadge({ result }) {
-  if (!result || result === "No games yet") return <span className="badge-none">–</span>;
-  const color = result.startsWith("W") ? "#22c55e" : result.startsWith("D") ? "#f59e0b" : "#ef4444";
-  const letter = result[0];
-  return (
-    <span style={{
-      background: color, color: "#fff", borderRadius: "4px",
-      padding: "2px 7px", fontSize: "0.72rem", fontWeight: 700, marginRight: 6
-    }}>{letter}</span>
-  );
-}
-
-function StatBox({ label, value, highlight }) {
-  return (
-    <div style={{
-      textAlign: "center", padding: "6px 10px",
-      background: highlight ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
-      borderRadius: 8, minWidth: 38
-    }}>
-      <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fff" }}>{value ?? "–"}</div>
-      <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
-    </div>
-  );
-}
-
-function PlayerCard({ entry, stats, rank }) {
-  const teamStats = stats?.[entry.team];
-  const isElim = teamStats?.status === "Eliminated";
-  const isChamp = teamStats?.stage === "Champions";
-
-  const cardBg = isChamp
-    ? `linear-gradient(135deg, #7c5c00, #c8a000)`
-    : isElim
-    ? `linear-gradient(135deg, #1a1a2e, #16213e)`
-    : `linear-gradient(135deg, ${entry.color}cc, ${entry.color}55)`;
-
-  const schedule = TEAM_SCHEDULES[entry.team] || [];
-
-  return (
-    <div style={{
-      background: cardBg,
-      borderRadius: 16,
-      padding: "20px",
-      border: `1px solid ${isElim ? "rgba(255,255,255,0.08)" : entry.color + "88"}`,
-      position: "relative",
-      overflow: "hidden",
-      opacity: isElim ? 0.6 : 1,
-      transition: "transform 0.2s",
-    }}
-      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-3px)"}
-      onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
-    >
-      {/* Rank badge */}
-      {rank <= 3 && !isElim && (
-        <div style={{
-          position: "absolute", top: 12, right: 12,
-          fontSize: "1.3rem"
-        }}>
-          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
-        </div>
-      )}
-
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-        <div style={{ fontSize: "2.4rem", lineHeight: 1 }}>{entry.flag}</div>
-        <div>
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-            {entry.name}
-          </div>
-          <div style={{ color: "#fff", fontSize: "1.15rem", fontWeight: 700, lineHeight: 1.2 }}>
-            {entry.team}
-          </div>
-          <div style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.68rem", marginTop: 2 }}>
-            Group {entry.group}
-          </div>
-        </div>
-      </div>
-
-      {/* Stage pill */}
-      <div style={{ marginBottom: 12 }}>
-        <span style={{
-          background: isChamp ? "#f59e0b" : isElim ? "#374151" : "rgba(255,255,255,0.15)",
-          color: isChamp ? "#000" : "#fff",
-          borderRadius: 20, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 600
-        }}>
-          {teamStats?.stage ?? "Awaiting data"}
-        </span>
-      </div>
-
-      {/* Stats row */}
-      {teamStats && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-          <StatBox label="Pts" value={teamStats.points} highlight />
-          <StatBox label="W" value={teamStats.won} />
-          <StatBox label="D" value={teamStats.drawn} />
-          <StatBox label="L" value={teamStats.lost} />
-          <StatBox label="GF" value={teamStats.gf} />
-          <StatBox label="GA" value={teamStats.ga} />
-        </div>
-      )}
-
-      {/* Last result */}
-      {teamStats?.lastResult && teamStats.lastResult !== "No games yet" && (
-        <div style={{ marginBottom: 10, fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>
-          <ScoreBadge result={teamStats.lastResult} />
-          {teamStats.lastResult.slice(2)}
-        </div>
-      )}
-
-      {/* Next match */}
-      {teamStats && !isElim && teamStats.nextMatch && teamStats.nextMatch !== "Eliminated" && (
-        <div style={{
-          background: "rgba(0,0,0,0.25)", borderRadius: 8, padding: "8px 10px",
-          fontSize: "0.72rem", color: "rgba(255,255,255,0.7)"
-        }}>
-          <span style={{ color: "rgba(255,255,255,0.4)", marginRight: 6 }}>NEXT</span>
-          {teamStats.nextMatch}
-        </div>
-      )}
-
-      {/* Schedule (if no live data yet) */}
-      {!teamStats && (
-        <div style={{ marginTop: 4 }}>
-          {schedule.slice(0, 2).map((m, i) => (
-            <div key={i} style={{
-              fontSize: "0.68rem", color: "rgba(255,255,255,0.45)",
-              marginBottom: 3
-            }}>
-              📅 {m.date} vs {m.opponent} ({m.time})
-            </div>
-          ))}
-        </div>
-      )}
-
-      {isElim && (
-        <div style={{
-          position: "absolute", bottom: 10, right: 12,
-          fontSize: "0.65rem", color: "rgba(255,255,255,0.3)", fontWeight: 600, letterSpacing: "0.1em"
-        }}>ELIMINATED</div>
-      )}
-    </div>
-  );
-}
-
-export default function App() {
-  const [liveData, setLiveData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchLiveData(SWEEPSTAKE);
-      setLiveData(result.teams);
-      setLastUpdated(new Date().toLocaleTimeString());
-    } catch (e) {
-      setError("Couldn't fetch live data. Showing schedule info only.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  // Sort: Champions > by points > Active over Eliminated
-  const sorted = [...SWEEPSTAKE].sort((a, b) => {
-    const sa = liveData?.[a.team];
-    const sb = liveData?.[b.team];
+function sortedEntries() {
+  return [...SWEEPSTAKE].sort((a, b) => {
+    const sa = liveData && liveData[a.team];
+    const sb = liveData && liveData[b.team];
     if (!sa && !sb) return 0;
     if (!sa) return 1;
     if (!sb) return -1;
-    if (sa.stage === "Champions") return -1;
-    if (sb.stage === "Champions") return 1;
-    if (sa.status === "Eliminated" && sb.status !== "Eliminated") return 1;
-    if (sb.status === "Eliminated" && sa.status !== "Eliminated") return -1;
-    return (sb.points ?? 0) - (sa.points ?? 0);
+    if (sa.stage === 'Champions') return -1;
+    if (sb.stage === 'Champions') return 1;
+    if (sa.status === 'Eliminated' && sb.status !== 'Eliminated') return 1;
+    if (sb.status === 'Eliminated' && sa.status !== 'Eliminated') return -1;
+    return (sb.points || 0) - (sa.points || 0);
   });
+}
 
-  return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(160deg, #0a0a1a 0%, #0d1b2a 50%, #0a1628 100%)",
-      fontFamily: "'Segoe UI', system-ui, sans-serif",
-      color: "#fff",
-      padding: "24px 16px 40px",
-    }}>
-      {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <div style={{ fontSize: "2.5rem", marginBottom: 4 }}>⚽</div>
-        <h1 style={{
-          margin: 0, fontSize: "clamp(1.5rem, 5vw, 2.2rem)", fontWeight: 800,
-          background: "linear-gradient(90deg, #f59e0b, #fcd34d, #f59e0b)",
-          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          letterSpacing: "-0.02em"
-        }}>
-          World Cup 2026
-        </h1>
-        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", marginTop: 4, letterSpacing: "0.15em" }}>
-          FAMILY SWEEPSTAKES
-        </div>
+function render() {
+  const sorted = sortedEntries();
+  renderLeaderboard(sorted);
+  renderGrid(sorted);
+}
 
-        {/* Refresh button */}
-        <button
-          onClick={load}
-          disabled={loading}
-          style={{
-            marginTop: 14, background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.4)",
-            color: "#f59e0b", borderRadius: 20, padding: "8px 20px", cursor: "pointer",
-            fontSize: "0.8rem", fontWeight: 600, letterSpacing: "0.05em",
-            transition: "all 0.2s"
-          }}
-        >
-          {loading ? "⟳ Refreshing..." : "↻ Refresh Live Data"}
-        </button>
+function renderLeaderboard(sorted) {
+  const lb = document.getElementById('leaderboard');
+  if (!liveData) { lb.innerHTML = ''; return; }
+  lb.innerHTML = sorted.map((e, i) => {
+    const s = liveData[e.team];
+    const borderColor = i < 3 ? e.color + '66' : 'rgba(255,255,255,0.1)';
+    return `<div class="lb-pill" style="border-color:${borderColor}">
+      <span class="lb-rank">#${i+1}</span>
+      <span>${e.flag}</span>
+      <span style="font-weight:600">${e.name}</span>
+      ${s ? `<span class="lb-pts">${s.points || 0}pts</span>` : ''}
+    </div>`;
+  }).join('');
+}
 
-        {lastUpdated && (
-          <div style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.68rem", marginTop: 8 }}>
-            Last updated: {lastUpdated}
-          </div>
-        )}
+function renderGrid(sorted) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = sorted.map((e, i) => cardHTML(e, i+1)).join('');
+}
 
-        {error && (
-          <div style={{
-            marginTop: 10, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
-            borderRadius: 8, padding: "8px 16px", fontSize: "0.75rem", color: "#fca5a5", display: "inline-block"
-          }}>
-            ⚠ {error}
-          </div>
-        )}
-      </div>
+function cardHTML(e, rank) {
+  const s = liveData && liveData[e.team];
+  const isElim = s && s.status === 'Eliminated';
+  const isChamp = s && s.stage === 'Champions';
 
-      {/* Quick leaderboard strip */}
-      {liveData && (
-        <div style={{
-          display: "flex", gap: 8, overflowX: "auto", marginBottom: 28,
-          paddingBottom: 8, justifyContent: "center", flexWrap: "wrap"
-        }}>
-          {sorted.map((entry, i) => {
-            const s = liveData[entry.team];
-            return (
-              <div key={entry.team} style={{
-                background: "rgba(255,255,255,0.05)", borderRadius: 20,
-                padding: "5px 12px", fontSize: "0.75rem",
-                border: `1px solid ${i < 3 ? entry.color + "66" : "rgba(255,255,255,0.1)"}`,
-                display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap"
-              }}>
-                <span style={{ opacity: 0.7 }}>#{i + 1}</span>
-                <span>{entry.flag}</span>
-                <span style={{ fontWeight: 600 }}>{entry.name}</span>
-                {s && <span style={{ color: "#f59e0b", fontWeight: 700 }}>{s.points ?? 0}pts</span>}
-              </div>
-            );
-          })}
-        </div>
-      )}
+  const bg = isChamp
+    ? 'linear-gradient(135deg,#7c5c00,#c8a000)'
+    : isElim
+    ? 'linear-gradient(135deg,#1a1a2e,#16213e)'
+    : `linear-gradient(135deg,${e.color}cc,${e.color}55)`;
 
-      {/* Cards grid */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))",
-        gap: 16,
-        maxWidth: 1100,
-        margin: "0 auto"
-      }}>
-        {sorted.map((entry, i) => (
-          <PlayerCard
-            key={entry.team}
-            entry={entry}
-            stats={liveData}
-            rank={i + 1}
-          />
-        ))}
-      </div>
+  const borderColor = isElim ? 'rgba(255,255,255,0.08)' : e.color + '88';
 
-      {/* Footer */}
-      <div style={{ textAlign: "center", marginTop: 32, color: "rgba(255,255,255,0.2)", fontSize: "0.68rem" }}>
-        🏆 World Cup 2026 · USA, Canada & Mexico · Jun 11 – Jul 19
+  let rankBadge = '';
+  if (rank <= 3 && !isElim) {
+    rankBadge = `<div class="card-rank">${rank===1?'&#x1F947;':rank===2?'&#x1F948;':'&#x1F949;'}</div>`;
+  }
+
+  let stagePill = `<span class="stage-pill${isChamp?' champion':isElim?' eliminated-pill':''}">${s ? s.stage : 'Awaiting data'}</span>`;
+
+  let statsRow = '';
+  if (s) {
+    statsRow = `<div class="stats-row">
+      ${statBox('Pts', s.points, true)}
+      ${statBox('W', s.won)}
+      ${statBox('D', s.drawn)}
+      ${statBox('L', s.lost)}
+      ${statBox('GF', s.gf)}
+      ${statBox('GA', s.ga)}
+    </div>`;
+  }
+
+  let lastResult = '';
+  if (s && s.lastResult && s.lastResult !== 'No games yet') {
+    const letter = s.lastResult[0];
+    const rest = s.lastResult.slice(2);
+    lastResult = `<div class="last-result">
+      <span class="result-badge ${letter}">${letter}</span>
+      ${rest}
+    </div>`;
+  }
+
+  let nextMatch = '';
+  if (s && !isElim && s.nextMatch && s.nextMatch !== 'Eliminated') {
+    nextMatch = `<div class="next-match"><span class="next-label">NEXT</span>${s.nextMatch}</div>`;
+  }
+
+  let schedule = '';
+  if (!s) {
+    const sched = SCHEDULES[e.team] || [];
+    schedule = sched.slice(0,2).map(m =>
+      `<div class="schedule-item">&#x1F4C5; ${m[0]} vs ${m[1]} (${m[2]})</div>`
+    ).join('');
+  }
+
+  let elimLabel = isElim ? '<div class="elim-label">ELIMINATED</div>' : '';
+
+  return `<div class="card${isElim?' eliminated':''}" style="background:${bg};border-color:${borderColor}">
+    ${rankBadge}
+    <div class="card-header">
+      <div class="card-flag">${e.flag}</div>
+      <div>
+        <div class="card-owner">${e.name}</div>
+        <div class="card-team">${e.team}</div>
+        <div class="card-group">Group ${e.group}</div>
       </div>
     </div>
-  );
+    <div>${stagePill}</div>
+    ${statsRow}
+    ${lastResult}
+    ${nextMatch}
+    ${schedule}
+    ${elimLabel}
+  </div>`;
 }
+
+function statBox(label, value, highlight) {
+  return `<div class="stat-box${highlight?' highlight':''}">
+    <div class="stat-val">${value !== undefined && value !== null ? value : '&ndash;'}</div>
+    <div class="stat-lbl">${label}</div>
+  </div>`;
+}
+
+// Load on start
+loadData();
+</script>
+</body>
+</html>
